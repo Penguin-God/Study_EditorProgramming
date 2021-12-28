@@ -5,7 +5,7 @@ using UnityEditor; // UnityEditor 관련 API 사용하기 위한 지시문
 using System;
 
 // Editor 폴더는 Unity 지정폴더로 이 폴더의 스크립트는 에디터에 기능을 추가하는 스크립트로 간주되면 런타임 떄 빌드에 사용할 수 없음
-public class MyEditorWindow : EditorWindow // 상속
+public class MyEditorWindow : EditorWindow // EditorWindow 상속
 {
     // Edit, Window가 있는 메뉴 창에 함수를 실행시킬 경로 추가
     [MenuItem("MyTool/OpenMyWindow %g")]
@@ -27,6 +27,7 @@ public class MyEditorWindow : EditorWindow // 상속
         //DrawLabelButton();
         //TestGUIContent();
         //TestGUIStyle();
+        //TestApplyStyle();
     }
 
     // GUI 관련 내용 정리
@@ -56,6 +57,21 @@ public class MyEditorWindow : EditorWindow // 상속
 
         // Editor라는 이름을 가진 Folder 안에 스크립트들은 EditorScript로 간주되며 object에 컴포넌트로 붙일 수 없음
         // 또한 런타임 시점에서는 사용 불가능함
+
+
+        // 스타일 관련 클래스 사용 시 주의사항
+        // EidtorStyles 같은 클래스의 경우 유니티 내부에서도 사용하는 가능들이 있음
+        // 따라서 EidtorStyles의 속성값을 바꾸면 유니티 인스펙터 창에도 그대로 적용됨
+
+        // 모든 인스펙터 창의 fontSize를 키워버리는 미친 코드
+        // GUIStyle gui = EditorStyles.label;
+        // gui.fontSize = 35;
+        // GUILayout.Label("ABC", gui);
+
+        // Unity에 영향을 주지않는 올바른 코드
+        // GUIStyle gui = new GUIStyle(EditorStyles.label);
+        // gui.fontSize = 35;
+        // GUILayout.Label("ABC", gui);
     }
 
     // Begin, End 테스트
@@ -236,5 +252,28 @@ public class MyEditorWindow : EditorWindow // 상속
         // 2번쨰 인자값으로 넘겨서 text를 어떻게 그릴지 정의함
         // 통째로 값을 넘기는 GUIContent와 다름
         GUILayout.Label("Hello GUIStyle", style);
+
+        // 생성자에 인수를 전달하여 GUIContent를 특정할 수 있음
+        GUIStyle buttonStyle = new GUIStyle("button");
+        buttonStyle.fontSize = 33;
+        buttonStyle.normal.textColor = Color.red;
+        buttonStyle.hover = new GUIStyleState() {textColor = Color.green };
+
+        GUILayout.Button("Hello GUIStyleButton", buttonStyle);
+    }
+
+
+    // 간단하게 스타일 적용하기
+    void TestApplyStyle()
+    {
+        // 여러가지 스타일을 가지고 있는 클래스들
+        // EditorStyles
+        // GUI.skin
+        GUILayout.Label("Hello EditorStyle", EditorStyles.boldLabel);
+        GUILayout.Box("Hello GUI.skin", GUI.skin.window);
+
+        // 다른 속성(style)을 넘겨줬을 경우
+        // 기능은 버튼인데 생긴건 textArea로 적용됨. 즉, Content는 그래로지만 Style은 달라짐
+        if (GUILayout.Button("Hello BoxButton", GUI.skin.textArea)) Debug.Log("Hi요");
     }
 }
