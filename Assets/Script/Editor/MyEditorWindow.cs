@@ -28,6 +28,9 @@ public class MyEditorWindow : EditorWindow // EditorWindow 상속
         //TestGUIContent();
         //TestGUIStyle();
         //TestApplyStyle();
+        //OnGUIEvent();
+        //OnGUI_ByOtherEvent();
+        StopEvent();
     }
 
     // GUI 관련 내용 정리
@@ -275,5 +278,55 @@ public class MyEditorWindow : EditorWindow // EditorWindow 상속
         // 다른 속성(style)을 넘겨줬을 경우
         // 기능은 버튼인데 생긴건 textArea로 적용됨. 즉, Content는 그래로지만 Style은 달라짐
         if (GUILayout.Button("Hello BoxButton", GUI.skin.textArea)) Debug.Log("Hi요");
+    }
+
+
+    // OnGUI 살펴보기
+    void OnGUIEvent()
+    {
+        // OnGUI는 Event로 마우스 클릭 등 예약되어 있는 특정 상황에서 호츌됨
+        // 하지만 모든 이벤트마다 그려대면 비효율적이니까 repaint type으로 호출됐을 때만 Darw작업을 실행함
+        // repaint가 다하는건 아니고 그리기 전에 관련 정보를 수집하는 Layout 이벤트가 실행됨
+        // Layout 이벤트에서 얻은 정보를 바탕으로 repaint가 실행되므로 두 이벤트의 정보가 다르면 에러 뜸
+
+        Debug.Log(Event.current.type);
+
+        var area = EditorGUILayout.BeginVertical(GUILayout.Width(200));
+        GUI.Box(area, GUIContent.none);
+
+        EditorGUILayout.LabelField("Hi");
+        EditorGUILayout.LabelField("Hi");
+
+        EditorGUILayout.EndVertical();
+    }
+
+
+    // Repaint를 제외한 이벤트 살펴보기
+    void OnGUI_ByOtherEvent()
+    {
+        if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Q)
+            Debug.Log("KeyDown is Q!!");
+        else if (Event.current.type == EventType.MouseDown && Event.current.button == 0)
+            Debug.Log("Left Mouse Button Down!!");
+    }
+
+
+    void StopEvent()
+    {
+        // 마우스 관련 이벤트라면
+        if (Event.current.isMouse)
+        {
+            Debug.Log(Event.current.type);
+            /*
+             마우스 관련 코드가 있다고 가정
+             */
+
+            // 이제 마우스 관련 이벤트는 끝내겠다.
+            Event.current.Use(); 
+        }
+
+        // 위에서 Event.current.Use(); 를 통해 마우스 관련 처리를 막았으므로 버튼을 클릭해도 코드가 실행되지 않음
+        // Event.current.Use(); 을 실행하면 현재 이벤트 타입이 Used로 바뀜
+        if (GUILayout.Button("Try Click!!")) Debug.Log("Success");
     }
 }
