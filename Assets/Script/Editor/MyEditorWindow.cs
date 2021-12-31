@@ -30,7 +30,7 @@ public class MyEditorWindow : EditorWindow // EditorWindow 상속
         //TestApplyStyle();
         //OnGUIEvent();
         //OnGUI_ByOtherEvent();
-        StopEvent();
+        //StopEvent();
     }
 
     // GUI 관련 내용 정리
