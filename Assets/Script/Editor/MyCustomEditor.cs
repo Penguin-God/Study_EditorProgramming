@@ -25,6 +25,8 @@ public class MyCustomEditor : Editor
         customComponent = (CustomComponent)base.target;
     }
 
+
+    // Unity가 인스펙터에 에디터를 표시할 때마다 실행됨
     public override void OnInspectorGUI()
     {
         // 다른 곳에서 값이 변경되었을 수도 있으므로 값을 업데이트하고 시작
