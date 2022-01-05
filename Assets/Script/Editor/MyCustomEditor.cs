@@ -6,8 +6,6 @@ using UnityEditor;
 [CustomEditor(typeof(CustomComponent))] // 재정의를 원하는 타입 넣기
 public class MyCustomEditor : Editor
 {
-    CustomComponent customComponent = null;
-
     // SerializedProperty : 직렬화된 프로퍼티
     SerializedProperty GameObjectProperty = null;
     SerializedProperty nameProperty = null;
@@ -21,10 +19,7 @@ public class MyCustomEditor : Editor
         GameObjectProperty = serializedObject.FindProperty($"{nameof(CustomComponent.myGameObject)}");
         nameProperty = serializedObject.FindProperty($"{nameof(CustomComponent.myName)}");
         hpProperty = serializedObject.FindProperty($"{nameof(CustomComponent.hp)}");
-
-        customComponent = (CustomComponent)base.target;
     }
-
 
     // Unity가 인스펙터에 에디터를 표시할 때마다 실행됨
     public override void OnInspectorGUI()
