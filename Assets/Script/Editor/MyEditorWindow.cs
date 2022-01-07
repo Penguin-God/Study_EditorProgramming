@@ -31,6 +31,9 @@ public class MyEditorWindow : EditorWindow // EditorWindow 상속
         //OnGUIEvent();
         //OnGUI_ByOtherEvent();
         //StopEvent();
+        //GetUnityInspectorGUI();
+        //TestSelectionClass();
+        //ManagedEditorData();
     }
 
     // GUI 관련 내용 정리
@@ -329,4 +332,131 @@ public class MyEditorWindow : EditorWindow // EditorWindow 상속
         // Event.current.Use(); 을 실행하면 현재 이벤트 타입이 Used로 바뀜
         if (GUILayout.Button("Try Click!!")) Debug.Log("Success");
     }
+
+
+    Editor getEditor = null;
+    Editor[] drawingEditors = null;
+    List<bool> Component_FoldOut_StateList = new List<bool>();
+    UnityEngine.Object drawObject = null;
+    // 선택한 오브젝트의 Unity 인스텍터를 내 Window로 가져와서 그리기
+    void GetUnityInspectorGUI()
+    {
+        // 선택한 오브젝트가 하나일 때
+        if (Selection.objects != null && Selection.objects.Length == 1 && Selection.objects[0] != drawObject)
+        {
+            Debug.Log("Hi");
+            getEditor = null;
+            drawingEditors = null;
+            Component_FoldOut_StateList.Clear();
+
+            drawObject = Selection.objects[0];
+            UnityEngine.Object target = Selection.objects[0];
+            getEditor = Editor.CreateEditor(target);
+
+            GameObject targetObj = target as GameObject;
+            if (targetObj != null)
+            {
+                Component[] getComs = targetObj.GetComponents(typeof(Component));
+                if (getComs == null) return;
+
+                drawingEditors = new Editor[getComs.Length];
+                for (int i = 0; i < getComs.Length; i++)
+                {
+                    drawingEditors[i] = Editor.CreateEditor(getComs[i]);
+                    Component_FoldOut_StateList.Add(false);
+                }
+            }
+        }
+
+        // 오브젝트를 선택해서 가져오는데 성공했을 때
+        if (getEditor != null)
+        {
+            //Debug.Log(Selection.objects == null); // 창 키고 아무 오브젝트나 한번 선택하면 이새기가 false가 되는 일은 없다
+            getEditor.DrawHeader();
+            getEditor.OnInspectorGUI();
+            if (drawingEditors == null) return;
+            for (int i = 0; i < drawingEditors.Length; i++)
+            {
+                Component_FoldOut_StateList[i] = EditorGUILayout.Foldout(Component_FoldOut_StateList[i], $"{drawingEditors[i].GetType()}");
+                Debug.Log(Component_FoldOut_StateList.Count);
+                if (Component_FoldOut_StateList[i]) drawingEditors[i].OnInspectorGUI();
+            }
+        }
+    }
+
+    // Selection Class 가지고 놀기
+    void TestSelectionClass()
+    {
+        if(GUILayout.Button("Select All Text"))
+        {
+            var allText = FindObjectsOfType<UnityEngine.UI.Text>();
+            GameObject[] gos = new GameObject[allText.Length];
+            for (int i = 0; i < allText.Length; i++) gos[i] = allText[i].gameObject;
+
+            Selection.objects = gos;
+        }
+
+        if(GUILayout.Button("선택한 오브젝트 핑 찍기"))
+        {
+            if (Selection.objects == null) return;
+            // 반복문 써도 하나밖에 안됨
+            EditorGUIUtility.PingObject(Selection.objects[0]);
+
+            //for (int i = 0; i < Selection.objects.Length; i++) EditorGUIUtility.PingObject(Selection.objects[i]);
+        }
+    }
+
+    string areaText = "";
+    int filedNumver = 0;
+    // 에디터 윈도우 관련 데이터 비휘발성(디스크, 안지워짐)에 저장, 로드, 삭제하기
+    void ManagedEditorData()
+    {
+        EditorGUILayout.BeginHorizontal();
+        {
+            EditorGUILayout.PrefixLabel("HiHi");
+            areaText = GUILayout.TextArea(areaText);
+        } EditorGUILayout.EndHorizontal();
+        filedNumver = EditorGUILayout.IntField("Int", filedNumver);
+        
+        if(GUILayout.Button("Save Data"))
+        {
+            EditorPrefs.SetString("MyText", areaText);
+            EditorPrefs.SetInt("MyNumber", filedNumver);
+        }
+
+        if (GUILayout.Button("Get Data"))
+        {
+            areaText = EditorPrefs.GetString("MyText");
+            filedNumver = EditorPrefs.GetInt("MyNumber");
+        }
+
+        if (GUILayout.Button("Remove Data"))
+        {
+            EditorPrefs.DeleteKey("MyText");
+            EditorPrefs.DeleteKey("MyNumber");
+        }
+    }
+
+
+    // window Focus 중 아니여도 돌아가게 하는 코드
+    bool isFocus = false;
+    private void Update()
+    {
+        if (!isFocus)
+        {
+            Repaint();
+        }
+    }
+
+    private void OnFocus()
+    {
+        isFocus = true;
+    }
+
+    private void OnLostFocus()
+    {
+
+        isFocus = false;
+    }
+
 }

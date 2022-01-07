@@ -7,11 +7,16 @@ using UnityEditor;
 public class SceneDrawer : Editor
 {
     MyCube Target = null;
+    MyCube CurrentTarget = null;
     private void OnEnable()
     {
-        Target = (MyCube)base.target;
-        // 오브젝트가 선택되면 씬 뷰에 드로잉하는 이벤트 구독
-        SceneView.duringSceneGui += DrawSceneGUI;
+        Target = base.target as MyCube;
+        if (Target != CurrentTarget)
+        {
+            // 오브젝트가 선택되면 씬 뷰에 드로잉하는 이벤트 구독
+            SceneView.duringSceneGui += DrawSceneGUI;
+            CurrentTarget = Target;
+        }
     }
 
     private void OnDisable()
@@ -21,6 +26,8 @@ public class SceneDrawer : Editor
 
     void DrawSceneGUI(SceneView obj)
     {
+        if (Target == null) return;
+        CurrentTarget = Target;
         Handles.Label(Target.transform.position, $"This is {Target.gameObject.name}");
 
         MyCube[] allCubes = FindObjectsOfType<MyCube>();
