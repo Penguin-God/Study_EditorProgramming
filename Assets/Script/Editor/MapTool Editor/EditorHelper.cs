@@ -39,4 +39,22 @@ public static class EditorHelper
         GUILayout.Space(5);
         return isClick;
     }
+
+    // destination : 도착점
+    public static void RayCast(Vector3 originPos, Vector3 destinationPos, out Vector3 hitPos)
+    {
+        // 뭐 시계 방향으로 돌면서 외적을해야 씬 뷰 카메라를 바라보는 법선 백터가 나온다느니
+        // 매개변수 방적식을 풀려면 내적을 해야한다느니 난 모르겠다~~
+        Vector3 planePos_1 = Vector3.up;
+        Vector3 planePos_2 = Vector3.right;
+        Vector3 planePos_3 = Vector3.down;
+
+        Vector3 planeDir = Vector3.Cross((planePos_2 - planePos_1).normalized, (planePos_3 - planePos_1).normalized);
+        Vector3 lineDir = (destinationPos - originPos).normalized;
+
+        float dotLinePlane = Vector3.Dot(lineDir, planeDir);
+        float t = Vector3.Dot(planePos_1 - originPos, planeDir) / dotLinePlane;
+
+        hitPos = originPos + (lineDir * t);
+    }
 }
