@@ -57,4 +57,40 @@ public static class EditorHelper
 
         hitPos = originPos + (lineDir * t);
     }
+
+    public static Vector2 DrawGridItem(int _gapSpace, int _itemCount, float _width, Vector2 _size, System.Action<int> _onDraw)
+    {
+        int _horCount = (int)(_width / _size.x);
+        if (_horCount <= 0) _horCount = 1;
+        int _verCount = _itemCount / _horCount;
+        if (_itemCount % _horCount > 0) _verCount++;
+        if (_verCount <= 0) _verCount = 1;
+
+
+        Vector2 _scollPos = Vector2.zero;
+        _scollPos = GUILayout.BeginScrollView(_scollPos);
+        {
+            GUILayout.BeginVertical();
+            {
+                for (int i = 0; i < _verCount; i++)
+                {
+                    GUILayout.BeginHorizontal();
+                    {
+                        for (int j = 0; j < _horCount; j++)
+                        {
+                            // _index = 현재 그리고 있는 item의 순서
+                            int _index = j + (i * _horCount);
+                            if (_index >= _itemCount) break;
+
+                            // 아이템 그리기
+                            _onDraw(_index);
+                            GUILayout.Space(_gapSpace);
+                        }
+                    }GUILayout.EndHorizontal();
+                }
+            }GUILayout.EndVertical();
+        }GUILayout.EndScrollView();
+
+        return _scollPos;
+    }
 }

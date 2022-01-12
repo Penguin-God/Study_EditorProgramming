@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 015daa6af1694a64d8f81ec889d2bf0d, type: 3}
+  m_Name: MyCustomPalette
+  m_EditorClassIdentifier: 
+  items:
+  - id: 0
+    myName: Capsule
+    targetObj: {fileID: 8934124856802254155, guid: 2962984d4ad51ea4dad01099d7fcc057, type: 3}
+  - id: 1
+    myName: Cube
+    targetObj: {fileID: 7739267915122439609, guid: 044895dc53a2a5e4592bbc0f3649bb8e, type: 3}
+  - id: 2
+    myName: Sphere
+    targetObj: {fileID: 5220000369017302850, guid: 84863f9b04470d14eb689db01a29a7b7, type: 3}
