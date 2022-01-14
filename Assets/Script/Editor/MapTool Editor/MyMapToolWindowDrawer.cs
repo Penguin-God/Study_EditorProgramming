@@ -63,6 +63,7 @@ public class MyMapToolWindowDrawer : EditorWindow
     {
         SceneView.duringSceneGui -= OnSceneGUI;
         Undo.undoRedoPerformed -= OnUndoRedoPerformed;
+        AutoSaveWhenCloseWindow();
         ClearAllGrid();
     }
 
@@ -113,15 +114,22 @@ public class MyMapToolWindowDrawer : EditorWindow
             paletteDrawer.targetPalette = targetPalette;
         }
 
+
         // 프로퍼티를 이용해 cell값이 설정되어있을 때애만 버튼을 클릭할 수 있게 함
         GUI.enabled = IsCreateAble;
         // GUI 비활성화 상태로 버튼 그리면 클린 안됨
-        if (EditorHelper.DrawCenterButton("생성하기", new Vector2(100, 50)))
+        if (GUILayout.Button("생성하기"))
         {
             targetGrid = BuildGrid(this.cellCount, this.cellSize);
             ChangeMode(MapToolMode.Edit);
         }
         GUI.enabled = true;
+
+        GUI.enabled = File.Exists(DefaultPath);
+        if (GUILayout.Button("이전 작업 이어서 하기")) LoadDefaultData();
+        GUI.enabled = true;
+
+        if (GUILayout.Button("작업 불러오기")) Load();
     }
 
     private CustomGrid BuildGrid(Vector2Int cellCount, Vector2 cellSize)
@@ -151,16 +159,7 @@ public class MyMapToolWindowDrawer : EditorWindow
 
             GUILayout.FlexibleSpace();
 
-            if (GUILayout.Button("저장하기", EditorStyles.toolbarButton))
-            {
-                Save();
-            }
-
-            if (GUILayout.Button("불러오기", EditorStyles.toolbarButton))
-            {
-                Load();
-            }
-
+            if (GUILayout.Button("저장하기", EditorStyles.toolbarButton))Save();
         }
         EditorGUILayout.EndHorizontal();
 
@@ -272,8 +271,9 @@ public class MyMapToolWindowDrawer : EditorWindow
 
     void ClearAllGrid()
     {
-        CustomGrid[] grids = FindObjectsOfType<CustomGrid>();
-        for (int i = 0; i < grids.Length; i++) DestroyImmediate(grids[i].gameObject);
+        if (targetGrid == null) return;
+        targetGrid.ClearAllObject();
+        DestroyImmediate(targetGrid.gameObject);
         targetGrid = null;
     }
 
@@ -299,7 +299,32 @@ public class MyMapToolWindowDrawer : EditorWindow
         if (!string.IsNullOrEmpty(_path))
         {
             byte[] _bytes = File.ReadAllBytes(_path);
-            if(_bytes != null) targetGrid.DeserializeItemDic(_bytes, targetPalette);
+            if (_bytes != null) LoadGridFromByte(_bytes);
         }
+    }
+
+    string DefaultPath => Path.Combine(Application.dataPath, "MapData", "DefultData.bin");
+    void AutoSaveWhenCloseWindow()
+    {
+        if (mode != MapToolMode.Edit) return;
+
+        byte[] _data = targetGrid.SerializeItemDic();
+        File.WriteAllBytes(DefaultPath, _data);
+        Debug.Log("Successed AutoSave");
+    }
+
+    void LoadDefaultData()
+    {
+        byte[] _bytes = File.ReadAllBytes(DefaultPath);
+        LoadGridFromByte(_bytes);
+    }
+
+    void LoadGridFromByte(byte[] _bytes)
+    {
+        ClearAllGrid();
+        targetGrid = new GameObject("Grid").AddComponent<CustomGrid>();
+        targetGrid.config = new CustomGridConfig();
+        targetGrid.DeserializeItemDic(_bytes, targetPalette);
+        ChangeMode(MapToolMode.Edit);
     }
 }

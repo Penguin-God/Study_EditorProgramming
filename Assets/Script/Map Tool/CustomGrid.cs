@@ -62,10 +62,10 @@ public class CustomGrid : MonoBehaviour
     }
 
     // retrieve : 되찾다, 복구하다, 회복하다
+    // Undo를 통해 오브젝트가 추가되거나 파괴하는 행동은 itemDic에서 관리할 수 없으므로 만든 함수
     public void RetrieveAll()
     {
         itemDic.Clear();
-        Debug.Log(itemDic.Count);
         MapObject[] _allMaps = FindObjectsOfType<MapObject>();
         Debug.Log(_allMaps.Length);
         for (int i = 0; i < _allMaps.Length; i++) itemDic.Add(_allMaps[i].cellPos, _allMaps[i]);
@@ -121,9 +121,15 @@ public class CustomGrid : MonoBehaviour
             // BinaryWriter : 쓰는거
             using (BinaryWriter _writer = new BinaryWriter(_stream))
             {
+                // 생성 모드 관련한 저장
+                _writer.Write(config.cellCount.x);
+                _writer.Write(config.cellCount.y);
+
+                _writer.Write(config.cellSize.x);
+                _writer.Write(config.cellSize.y);
+
                 // 나중에 Read할 때 반복문 몇 번 순회할지 알리기 위한 저장
                 _writer.Write(itemDic.Count);
-
                 foreach (KeyValuePair<Vector2Int, MapObject> _item in itemDic)
                 {
                     _writer.Write(_item.Key.x);
@@ -140,15 +146,20 @@ public class CustomGrid : MonoBehaviour
     // buffer : 데이터 송신을 위해 일시적으로 데이터를 기억시키는 장치. 순화어는 완충기
     public void DeserializeItemDic(byte[] _buffer, GridPalette _targetPalette)
     {
-        foreach (var _item in itemDic) DestroyImmediate(_item.Value.gameObject);
-        itemDic.Clear();
-
-        using(MemoryStream _stream = new MemoryStream(_buffer))
+        ClearAllObject();
+        using (MemoryStream _stream = new MemoryStream(_buffer))
         {
             using(BinaryReader _reader = new BinaryReader(_stream))
             {
-                int _count = _reader.ReadInt32();
+                int _xCount = _reader.ReadInt32();
+                int _yCount = _reader.ReadInt32();
+                float _xSize = _reader.ReadSingle();
+                float _ySize = _reader.ReadSingle();
+                config.cellCount = new Vector2Int(_xCount, _yCount);
+                config.cellSize = new Vector2(_xSize, _ySize);
 
+                int _count = _reader.ReadInt32();
+                Debug.Log(_count);
                 for(int i = 0; i < _count; i++)
                 {
                     int _xPos = _reader.ReadInt32();
@@ -160,5 +171,26 @@ public class CustomGrid : MonoBehaviour
                 }
             }
         }
+    }
+
+    public void ClearAllObject()
+    {
+        foreach (var _item in itemDic) DestroyImmediate(_item.Value.gameObject);
+        itemDic.Clear();
+    }
+
+    private void Start()
+    {
+        Test();
+    }
+
+    void Test()
+    {
+        Debug.LogError("에셋 프리펩으로 팔레트 주소 저장해서 가져오기");
+        //string _palettePath = targetGrid.DeserializeItemDic(_bytes, targetPalette);
+        //targetPalette = AssetDatabase.LoadAssetAtPath<GridPalette>(_palettePath);
+        //paletteDrawer.targetPalette = targetPalette;
+        //string _palettePath = "";
+        //if (targetPalette != null) _palettePath = AssetDatabase.GetAssetPath(targetPalette);
     }
 }
