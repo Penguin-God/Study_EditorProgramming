@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.IO;
 
 public class CustomGrid : MonoBehaviour
 {
@@ -60,6 +61,16 @@ public class CustomGrid : MonoBehaviour
         }
     }
 
+    // retrieve : 되찾다, 복구하다, 회복하다
+    public void RetrieveAll()
+    {
+        itemDic.Clear();
+        Debug.Log(itemDic.Count);
+        MapObject[] _allMaps = FindObjectsOfType<MapObject>();
+        Debug.Log(_allMaps.Length);
+        for (int i = 0; i < _allMaps.Length; i++) itemDic.Add(_allMaps[i].cellPos, _allMaps[i]);
+    }
+
     public bool CheckCellAreaInPos(Vector2Int _pos)
     {
         return _pos.x >= 0 && _pos.x < config.cellCount.x && _pos.y >= 0 && _pos.y < config.cellCount.y; 
@@ -84,10 +95,11 @@ public class CustomGrid : MonoBehaviour
             return null;
         }
 
-        GameObject _target = GameObject.Instantiate(_item.targetObj, transform);
+        GameObject _target =  GameObject.Instantiate(_item.targetObj);
         _target.transform.position = CellPosToCreatePoint(_cellPos);
         MapObject _mapObj = _target.AddComponent<MapObject>();
         _mapObj.id = _item.id;
+        _mapObj.cellPos = _cellPos;
         itemDic.Add(_cellPos, _mapObj);
         return _mapObj;
     }
@@ -95,5 +107,58 @@ public class CustomGrid : MonoBehaviour
     public void RemoveItem(Vector2Int _key)
     {
         if (itemDic.ContainsKey(_key)) itemDic.Remove(_key);
+    }
+
+    
+    // 파일로 저장하기 위해 데이터를 Serialize화 시킴
+    public byte[] SerializeItemDic()
+    {
+        byte[] _bytes = null;
+        // using : python의 with() 문법처럼 파일, 폰트와 같은 메모리를 할당해야하는 작업을 할 때 내부 코드가 끝나면 알아서 메모리를 반납함
+        // MemoryStream : 메모리 할당
+        using (MemoryStream _stream = new MemoryStream())
+        {
+            // BinaryWriter : 쓰는거
+            using (BinaryWriter _writer = new BinaryWriter(_stream))
+            {
+                // 나중에 Read할 때 반복문 몇 번 순회할지 알리기 위한 저장
+                _writer.Write(itemDic.Count);
+
+                foreach (KeyValuePair<Vector2Int, MapObject> _item in itemDic)
+                {
+                    _writer.Write(_item.Key.x);
+                    _writer.Write(_item.Key.y);
+                    _writer.Write(_item.Value.id);
+                }
+
+                _bytes = _stream.ToArray();
+            }
+        }
+        return _bytes;
+    }
+
+    // buffer : 데이터 송신을 위해 일시적으로 데이터를 기억시키는 장치. 순화어는 완충기
+    public void DeserializeItemDic(byte[] _buffer, GridPalette _targetPalette)
+    {
+        foreach (var _item in itemDic) DestroyImmediate(_item.Value.gameObject);
+        itemDic.Clear();
+
+        using(MemoryStream _stream = new MemoryStream(_buffer))
+        {
+            using(BinaryReader _reader = new BinaryReader(_stream))
+            {
+                int _count = _reader.ReadInt32();
+
+                for(int i = 0; i < _count; i++)
+                {
+                    int _xPos = _reader.ReadInt32();
+                    int _yPos = _reader.ReadInt32();
+                    int _id = _reader.ReadInt32();
+
+                    Vector2Int _pos = new Vector2Int(_xPos, _yPos);
+                    AddItem(_pos, _targetPalette.GetItem(_id));
+                }
+            }
+        }
     }
 }

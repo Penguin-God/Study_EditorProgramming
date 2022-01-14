@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System;
+using System.IO;
 
 public enum MapToolMode
 {
@@ -48,12 +49,20 @@ public class MyMapToolWindowDrawer : EditorWindow
             EditorGUIUtility.TrIconContent("Grid.EraserTool", "지우기 모드")
         };
         ChangeMode(MapToolMode.Create);
+
+        SceneView.duringSceneGui -= OnSceneGUI;
         SceneView.duringSceneGui += OnSceneGUI;
+
+        // Ondo 혹은 Redo가 실행되면 구독한 함수가 작동함(Ctrl + Z, Ctrl + Y 로 실행)
+        Undo.undoRedoPerformed += OnUndoRedoPerformed;
     }
+
+    void OnUndoRedoPerformed() => targetGrid.RetrieveAll();
 
     private void OnDisable()
     {
         SceneView.duringSceneGui -= OnSceneGUI;
+        Undo.undoRedoPerformed -= OnUndoRedoPerformed;
         ClearAllGrid();
     }
 
@@ -62,7 +71,14 @@ public class MyMapToolWindowDrawer : EditorWindow
         switch (mode)
         {
             case MapToolMode.Create: DrawCreateMode(); break;
-            case MapToolMode.Edit: DrawEditMode(); break;
+            case MapToolMode.Edit:
+                if (Event.current.type == EventType.KeyDown)
+                {
+                    if (Event.current.keyCode == KeyCode.Q) editMode = EditMapMode.Paint;
+                    else if (Event.current.keyCode == KeyCode.W) editMode = EditMapMode.Erase;
+                    Repaint();
+                }
+                DrawEditMode(); break;
             default: Debug.Log("모드 없음"); break;
         }
     }
@@ -135,14 +151,14 @@ public class MyMapToolWindowDrawer : EditorWindow
 
             GUILayout.FlexibleSpace();
 
-            if (GUILayout.Button("불러오기", EditorStyles.toolbarButton))
-            {
-
-            }
-
             if (GUILayout.Button("저장하기", EditorStyles.toolbarButton))
             {
+                Save();
+            }
 
+            if (GUILayout.Button("불러오기", EditorStyles.toolbarButton))
+            {
+                Load();
             }
 
         }
@@ -170,6 +186,11 @@ public class MyMapToolWindowDrawer : EditorWindow
     }
 
 
+    private void Update()
+    {
+        SceneView.lastActiveSceneView.Repaint();
+    }
+
     private void OnSceneGUI(SceneView obj)
     {
         //Vector2 myMousePos = Event.current.mousePosition;
@@ -179,19 +200,44 @@ public class MyMapToolWindowDrawer : EditorWindow
 
         if (mode != MapToolMode.Edit) return;
 
+        Vector2 _mousePos = Event.current.mousePosition;
+        Ray _ray = HandleUtility.GUIPointToWorldRay(_mousePos);
+        EditorHelper.RayCast(_ray.origin, _ray.origin + _ray.direction * 300, out Vector3 _hitPos);
+        Vector2Int _cellPos = targetGrid.GetCellPos(_hitPos);
+
         // 왼쪽 마우스를 다운했다면
-        if(Event.current.button == 0 && Event.current.type == EventType.MouseDown)
+        if (Event.current.button == 0 && Event.current.type == EventType.MouseDown)
         {
-            Vector2 _mousePos = Event.current.mousePosition;
-            Ray _ray = HandleUtility.GUIPointToWorldRay(_mousePos);
-            EditorHelper.RayCast(_ray.origin, _ray.origin + _ray.direction * 300, out Vector3 _hitPos);
-            Vector2Int _cellPos = targetGrid.GetCellPos(_hitPos);
             if (targetGrid.CheckCellAreaInPos(_cellPos))
             {
                 if (editMode == EditMapMode.Paint) Paint(_cellPos);
                 else Erase(_cellPos);
             }
         }
+
+        Handles.BeginGUI();
+        {
+            GUIStyle _myGUIStyle = new GUIStyle();
+            _myGUIStyle.normal.textColor = Color.black;
+            _myGUIStyle.fontStyle = FontStyle.Bold;
+            GUI.Label(new Rect(_mousePos.x + 20, _mousePos.y, 100, 50), _cellPos.ToString(), _myGUIStyle);
+
+            if (targetGrid.CheckItemExist(_cellPos))
+            {
+                PaletteItem _item = targetPalette.GetItem(targetGrid.GetItem(_cellPos).id);
+                Texture2D _texture = AssetPreview.GetAssetPreview(_item.targetObj);
+
+                Rect _boxRect = new Rect(10, 10, _texture.width + 10, _texture.height + 10);
+                GUI.Box(_boxRect, GUIContent.none, GUI.skin.window);
+
+                Rect _textureRect = new Rect(15, 15, _texture.width, _texture.height);
+                GUI.DrawTexture(_textureRect, _texture);
+
+                Rect _nameRect = new Rect(_boxRect.center.x, _boxRect.yMax - 25, 100, 10);
+                GUI.Label(_nameRect, _item.myName,_myGUIStyle);
+            }
+        }
+        Handles.EndGUI();
     }
 
     void Paint(Vector2Int _cellPos)
@@ -206,7 +252,9 @@ public class MyMapToolWindowDrawer : EditorWindow
             targetGrid.RemoveItem(_cellPos);
         }
 
-        targetGrid.AddItem(_cellPos, _item);
+        MapObject _newObject =  targetGrid.AddItem(_cellPos, _item);
+        // 생성된 오브젝트를 등록해 놓으면 Undo(취소) 했을 때 유니티가 알아서 삭제해줌
+        Undo.RegisterCreatedObjectUndo(_newObject.gameObject, "Create MapObject!!!");
         Event.current.Use();
     }
 
@@ -215,7 +263,7 @@ public class MyMapToolWindowDrawer : EditorWindow
         if (targetGrid.CheckItemExist(_cellPos))
         {
             Debug.Log("Remove");
-            DestroyImmediate(targetGrid.GetItem(_cellPos).gameObject);
+            Undo.DestroyObjectImmediate(targetGrid.GetItem(_cellPos).gameObject);
             targetGrid.RemoveItem(_cellPos);
         }
         Event.current.Use();
@@ -227,5 +275,31 @@ public class MyMapToolWindowDrawer : EditorWindow
         CustomGrid[] grids = FindObjectsOfType<CustomGrid>();
         for (int i = 0; i < grids.Length; i++) DestroyImmediate(grids[i].gameObject);
         targetGrid = null;
+    }
+
+
+    string MapDataFolderPath => Path.Combine(Application.dataPath, "MapData");
+
+    void Save()
+    {
+        string _path = EditorUtility.SaveFilePanel("맵 데이터 저장", MapDataFolderPath, "MapData.bin", "bin");
+        // _path가 Null이 아니거나 비어있지 않다면
+        if (!string.IsNullOrEmpty(_path))
+        {
+            byte[] _data = targetGrid.SerializeItemDic();
+            File.WriteAllBytes(_path, _data);
+            ShowNotification(new GUIContent("데이터 저장 성공!!!"), 3);
+        }
+    }    
+
+    void Load()
+    {
+        // 코드가 작동하면 폴더를 열고 유저가 선택하는 형식이므로 정확한 주소가 필요하지 않음
+        string _path = EditorUtility.OpenFilePanel("맵 데이터 불러오기", MapDataFolderPath, "bin");
+        if (!string.IsNullOrEmpty(_path))
+        {
+            byte[] _bytes = File.ReadAllBytes(_path);
+            if(_bytes != null) targetGrid.DeserializeItemDic(_bytes, targetPalette);
+        }
     }
 }

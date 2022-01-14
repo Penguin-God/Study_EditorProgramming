@@ -93,4 +93,14 @@ public static class EditorHelper
 
         return _scollPos;
     }
+
+    public static GameObject ObjectCreateAndRegiterUndo(GameObject _gameObj)
+    {
+        GameObject _createObject = GameObject.Instantiate(_gameObj);
+        // 생성된 오브젝트를 등록해 놓으면 Undo(취소) 했을 때 유니티가 알아서 삭제해줌
+        Undo.RegisterCreatedObjectUndo(_createObject, "Create MapObject!!!");
+        return _createObject;
+    }
+
+    public static void ObjectDestroyAndRegiterUndo(GameObject _gameObj) => Undo.DestroyObjectImmediate(_gameObj);
 }
