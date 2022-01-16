@@ -178,19 +178,4 @@ public class CustomGrid : MonoBehaviour
         foreach (var _item in itemDic) DestroyImmediate(_item.Value.gameObject);
         itemDic.Clear();
     }
-
-    private void Start()
-    {
-        Test();
-    }
-
-    void Test()
-    {
-        Debug.LogError("에셋 프리펩으로 팔레트 주소 저장해서 가져오기");
-        //string _palettePath = targetGrid.DeserializeItemDic(_bytes, targetPalette);
-        //targetPalette = AssetDatabase.LoadAssetAtPath<GridPalette>(_palettePath);
-        //paletteDrawer.targetPalette = targetPalette;
-        //string _palettePath = "";
-        //if (targetPalette != null) _palettePath = AssetDatabase.GetAssetPath(targetPalette);
-    }
 }
