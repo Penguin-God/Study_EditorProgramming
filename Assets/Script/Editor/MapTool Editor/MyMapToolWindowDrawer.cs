@@ -63,7 +63,7 @@ public class MyMapToolWindowDrawer : EditorWindow
     {
         SceneView.duringSceneGui -= OnSceneGUI;
         Undo.undoRedoPerformed -= OnUndoRedoPerformed;
-        AutoSaveWhenCloseWindow();
+        if(mode == MapToolMode.Edit) AutoSaveWhenCloseWindow();
         ClearAllGrid();
     }
 
@@ -113,7 +113,7 @@ public class MyMapToolWindowDrawer : EditorWindow
             cellCount = EditorGUILayout.Vector2IntField("Cell 개수", cellCount);
             cellSize = EditorGUILayout.Vector2Field("Cell 크기", cellSize);
             targetPalette = (GridPalette)EditorGUILayout.ObjectField("연결할 팔레트", targetPalette, typeof(GridPalette));
-            paletteDrawer.targetPalette = targetPalette;
+            paletteDrawer.targetPalette = DrawPalette;
             projectName = EditorGUILayout.TextField("프로젝트 이름", projectName);
         }
 
@@ -129,18 +129,37 @@ public class MyMapToolWindowDrawer : EditorWindow
                 return;
             }
 
-            EditorPrefs.SetBool(projectName, true);
             targetGrid = BuildGrid(this.cellCount, this.cellSize);
             ChangeMode(MapToolMode.Edit);
         }
-        GUI.enabled = true;
 
-        GUI.enabled = EditorPrefs.HasKey(PreviousKey);
+        GUI.enabled = EditorPrefs.HasKey(projectName);
         if (GUILayout.Button("이전 작업 이어서 하기")) LoadDefaultData();
         GUI.enabled = true;
 
-        if (GUILayout.Button("작업 불러오기")) Load();
-        if (GUILayout.Button("모든 키 삭제")) EditorPrefs.DeleteAll();
+        if (GUILayout.Button("작업 불러오기"))
+        {
+
+            Load();
+        }
+
+        if (GUILayout.Button("Set Test Key"))
+        {
+            string _palettePath = AssetDatabase.GetAssetPath(targetPalette);
+            EditorPrefs.SetString(projectName, _palettePath);
+            Debug.Log(projectName);
+        }
+        if (GUILayout.Button("Get Test Key"))
+        {
+            string _path = EditorUtility.OpenFilePanel("맵 데이터 불러오기", MapDataFolderPath, "bin");
+            string _projectName = Path.GetFileName(_path).Split('.')[0];
+            Debug.Log(_projectName);
+
+            string _getValue = EditorPrefs.GetString(PreviousKey);
+            Debug.Log(EditorPrefs.HasKey(PreviousKey));
+            ShowNotification(new GUIContent(_getValue), 3);
+        }
+        if (GUILayout.Button("Delete Test Key")) EditorPrefs.DeleteKey(projectName);
     }
 
     private CustomGrid BuildGrid(Vector2Int cellCount, Vector2 cellSize)
@@ -201,6 +220,7 @@ public class MyMapToolWindowDrawer : EditorWindow
         SceneView.lastActiveSceneView.Repaint();
     }
 
+    GridPalette DrawPalette => targetPalette;
     private void OnSceneGUI(SceneView obj)
     {
         //Vector2 myMousePos = Event.current.mousePosition;
@@ -234,7 +254,7 @@ public class MyMapToolWindowDrawer : EditorWindow
 
             if (targetGrid.CheckItemExist(_cellPos))
             {
-                PaletteItem _item = targetPalette.GetItem(targetGrid.GetItem(_cellPos).id);
+                PaletteItem _item = DrawPalette.GetItem(targetGrid.GetItem(_cellPos).id);
                 Texture2D _texture = AssetPreview.GetAssetPreview(_item.targetObj);
 
                 Rect _boxRect = new Rect(10, 10, _texture.width + 10, _texture.height + 10);
@@ -289,26 +309,22 @@ public class MyMapToolWindowDrawer : EditorWindow
     }
 
 
-    string MapDataFolderPath => Path.Combine(Application.dataPath, "MapData");
     void Save()
     {
         SaveData();
         ShowNotification(new GUIContent("데이터 저장 성공!!!"), 3);
     }
 
-    string CurrentPath => Path.Combine(Application.dataPath, "MapData", projectName + ".bin");
+    string PreviousKey => "pre";
 
-    string PreviousKey => "PreviousKey";
-    //string DefaultPath => Path.Combine(Application.dataPath, PreviousKey, "DefultData.bin");
+    string CurrnetPath => Path.Combine(Application.dataPath, "MapData", projectName + ".bin");
     void AutoSaveWhenCloseWindow()
     {
         if (mode != MapToolMode.Edit) return;
 
-        // 아래에 코드가 실행이 안되는 괴담
-        Debug.Log("uqduqaduoiasio");
-        Debug.Log("uqduqaduoiasio");
-        Debug.Log("uqduqaduoiasio");
-        CheckAndSetKey(PreviousKey, CurrentPath);
+        if (EditorPrefs.HasKey(PreviousKey)) EditorPrefs.DeleteKey(PreviousKey);
+
+        EditorPrefs.SetString(PreviousKey, projectName);
         SaveData();
         Debug.Log("Successed AutoSave");
     }
@@ -318,19 +334,15 @@ public class MyMapToolWindowDrawer : EditorWindow
         if (string.IsNullOrEmpty(projectName)) return;
 
         string _palettePath = AssetDatabase.GetAssetPath(targetPalette);
-        CheckAndSetKey(CurrentPath, _palettePath);
+        Debug.Log(_palettePath);
+        EditorPrefs.SetString(projectName, _palettePath);
+        Debug.Log(projectName);
+
         byte[] _data = targetGrid.SerializeItemDic();
-        File.WriteAllBytes(CurrentPath, _data);
+        File.WriteAllBytes(CurrnetPath, _data);
     }
 
-    void CheckAndSetKey(string _key, string _value)
-    {
-        Debug.Log("uqduqaduoiasio");
-        Debug.Log($"{_key },   {_value}");
-        EditorPrefs.SetString(_key, _value);
-    }
-
-
+    string MapDataFolderPath => Path.Combine(Application.dataPath, "MapData");
     void Load()
     {
         // 코드가 작동하면 폴더를 열고 유저가 선택하는 형식이므로 정확한 주소가 필요하지 않음
@@ -338,27 +350,36 @@ public class MyMapToolWindowDrawer : EditorWindow
         LoadData(_path);
     }
 
-
     void LoadDefaultData()
     {
         if (EditorPrefs.HasKey(PreviousKey))
-            LoadData(EditorPrefs.GetString(PreviousKey));
+        {
+            string _projectName = EditorPrefs.GetString(PreviousKey);
+            string _path = Path.Combine(MapDataFolderPath, _projectName + ".bin");
+            LoadData(_path);
+        }
     }
 
     void LoadData(string _path)
     {
-        if (!EditorPrefs.HasKey(_path) || string.IsNullOrEmpty(_path))
+        string _projectName = Path.GetFileName(_path).Split('.')[0];
+
+        if (!EditorPrefs.HasKey(_projectName) || string.IsNullOrEmpty(_path))
         {
-            Debug.LogError("저장된 값이 없거나 비어있는 경로");
+            bool _hasKey = EditorPrefs.HasKey(_projectName);
+            Debug.LogError($"저장된 값이 없거나 비어있는 경로. {_path},   {_hasKey} : {_projectName}");
             return;
         }
 
-        string _palettePath = EditorPrefs.GetString(_path);
+        string _palettePath = EditorPrefs.GetString(_projectName);
+        Debug.Log(_palettePath);
         targetPalette = AssetDatabase.LoadAssetAtPath<GridPalette>(_palettePath);
+        paletteDrawer.targetPalette = targetPalette;
 
         byte[] _bytes = File.ReadAllBytes(_path);
         if (_bytes != null) LoadGridFromByte(_bytes);
     }
+
 
     void LoadGridFromByte(byte[] _bytes)
     {
@@ -366,6 +387,7 @@ public class MyMapToolWindowDrawer : EditorWindow
         targetGrid = new GameObject("Grid").AddComponent<CustomGrid>();
         targetGrid.config = new CustomGridConfig();
         targetGrid.DeserializeItemDic(_bytes, targetPalette);
+
         ChangeMode(MapToolMode.Edit);
     }
 }

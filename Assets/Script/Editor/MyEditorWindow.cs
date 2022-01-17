@@ -33,7 +33,7 @@ public class MyEditorWindow : EditorWindow // EditorWindow 상속
         //StopEvent();
         //GetUnityInspectorGUI();
         //TestSelectionClass();
-        //ManagedEditorData();
+        ManagedEditorData();
     }
 
     // GUI 관련 내용 정리
