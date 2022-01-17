@@ -304,13 +304,13 @@ public class MyMapToolWindowDrawer : EditorWindow
     {
         if (mode != MapToolMode.Edit) return;
 
-        CheckAndSetKey(PreviousKey, CurrentPath);
-        SaveData();
-        Debug.Log("Successed AutoSave");
         // 아래에 코드가 실행이 안되는 괴담
         Debug.Log("uqduqaduoiasio");
         Debug.Log("uqduqaduoiasio");
         Debug.Log("uqduqaduoiasio");
+        CheckAndSetKey(PreviousKey, CurrentPath);
+        SaveData();
+        Debug.Log("Successed AutoSave");
     }
 
     void SaveData()
