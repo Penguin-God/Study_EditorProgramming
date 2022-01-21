@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
+using UnityEditor;
 
 public class CustomGrid : MonoBehaviour
 {
@@ -111,7 +112,7 @@ public class CustomGrid : MonoBehaviour
 
     
     // 파일로 저장하기 위해 데이터를 Serialize화 시킴
-    public byte[] SerializeItemDic()
+    public byte[] SerializeItemDic(string _paletteGuid)
     {
         byte[] _bytes = null;
         // using : python의 with() 문법처럼 파일, 폰트와 같은 메모리를 할당해야하는 작업을 할 때 내부 코드가 끝나면 알아서 메모리를 반납함
@@ -122,6 +123,7 @@ public class CustomGrid : MonoBehaviour
             using (BinaryWriter _writer = new BinaryWriter(_stream))
             {
                 // 생성 모드 관련한 저장
+                _writer.Write(_paletteGuid);
                 _writer.Write(config.cellCount.x);
                 _writer.Write(config.cellCount.y);
 
@@ -144,13 +146,17 @@ public class CustomGrid : MonoBehaviour
     }
 
     // buffer : 데이터 송신을 위해 일시적으로 데이터를 기억시키는 장치. 순화어는 완충기
-    public void DeserializeItemDic(byte[] _buffer, GridPalette _targetPalette)
+    public void DeserializeItemDic(byte[] _buffer, out GridPalette _targetPalette)
     {
         ClearAllObject();
         using (MemoryStream _stream = new MemoryStream(_buffer))
         {
             using(BinaryReader _reader = new BinaryReader(_stream))
             {
+                string _paletteGuid = _reader.ReadString();
+                string _palettePath = AssetDatabase.GUIDToAssetPath(_paletteGuid);
+                _targetPalette = AssetDatabase.LoadAssetAtPath<GridPalette>(_palettePath);
+
                 int _xCount = _reader.ReadInt32();
                 int _yCount = _reader.ReadInt32();
                 float _xSize = _reader.ReadSingle();
